@@ -1,30 +1,29 @@
 #include <unordered_map>
 #include <utility>
-#include <iostream>
 #include <string>
+#include <vector>
 
 #define UNUSED(x) ((void)(x))
 
 namespace newsh {
 
-    typedef int (* func)(char **);
+    typedef int (* func)(std::vector<std::string> args);
    
     /** SHELL FUNCTIONS **/
-    
     namespace sh {
     
-    int stub(char **args);
+    int stub(std::vector<std::string> args);
     
-    int man(char **args);
+    int man(std::vector<std::string> args);
 
-    int cd(char **args);
+    int cd(std::vector<std::string> args);
     
-    int cat(char **args);
+    int cat(std::vector<std::string> args);
 
     }
     /** end **/
 
-    static std::unordered_map<std::string, const char *> manShellCommands {
+    static std::unordered_map<std::string, std::string> manShellCommands {
         {"cd", "change directory to the existing path"},
         {"man", "manual about the given command"},
         {"cat", "write content of file into stdout"}
@@ -37,9 +36,9 @@ namespace newsh {
     };
 
 
-    std::pair<std::string, func> findCommand(const char *name);
+    std::pair<std::string, func> findCommand(const std::string &name);
     
-    const char *getManUsage(const char *name);
+    std::string getManUsage(const std::string &name);
     
-    int dispatchCommand(std::pair<std::string, func> fn, char **args);
+    int dispatchCommand(std::pair<std::string, func> fn, std::vector<std::string> args);
 }

@@ -10,11 +10,11 @@ namespace newsh {
 
     void runShell();
     
-    char *readLine();
+    std::string readLine();
     
-    char **parseLine(char *line);
+    std::vector<std::string> parseLine(std::string line);
 
-    int execute(char **args);
+    int execute(std::vector<std::string> args);
 }
 
 

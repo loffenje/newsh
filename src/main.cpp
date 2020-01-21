@@ -2,7 +2,7 @@
 
 using namespace newsh;
 
-int main(int argc, char **argv)
+int main()
 {
     runShell();
 

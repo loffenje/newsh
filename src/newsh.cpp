@@ -1,12 +1,10 @@
 #include <algorithm>
-#include <new>
 #include <utility>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <iostream>
 #include <stdio.h>
 #include <string.h>
-#include <string>
 
 #include "newsh.h"
 #include "command.h"
@@ -15,16 +13,26 @@
 
 namespace newsh {
     
-
-    static int launch(char **args)
+    static int launch(std::vector<std::string> args)
     {
         pid_t pid;
         int status;
+        
+        if (args.empty()) return 1;
+        
+        std::vector<char *> cArgs;
+        cArgs.reserve(args.size() + 1);
 
+        std::transform(args.begin(), args.end(), std::back_inserter(cArgs), 
+                        [](const std::string &s) { return (char *)s.c_str(); }); //some issue with data() method
+        
+        cArgs.push_back(nullptr);
+
+        char *cmd = cArgs[0];
         pid = fork();
         if (pid == 0) {
             // child
-            if (execvp(args[0], args) == -1) {
+            if (execvp(cmd, cArgs.data()) == -1) {
                 perror("sh");
             }
 
@@ -49,73 +57,51 @@ namespace newsh {
 
     void runShell() 
     {
-        char **args;
-        char *line;
+        std::vector<std::string> args;
+        std::string line;
         int status;
         do {
             std::cout << "newsh> ";
             line = readLine();
             args = parseLine(line);
             status = execute(args);
-
-            delete[] args;
-
         } while(status > 0);
     }
     
-    char *readLine()
+    std::string readLine()
     {
-        char *line = nullptr;
-        size_t bufSize = 0;
-        getline(&line, &bufSize, stdin);
+        std::string line;
 
+        std::getline(std::cin, line);
         return line;
     }
     
-    char **parseLine(char *line)
+    std::vector<std::string> parseLine(std::string line)
     {
-        int bufSize = NLINE;
-        int position = 0;
-        char **tokens = new (std::nothrow) char *[bufSize * sizeof(char *)];
-        if (!tokens) {
-            std::cerr << "ERR: allocation of buffer\n";
-            exit(EXIT_FAILURE);
-        }
+        std::vector<std::string> tokens;
+        std::string delimits = DELIMIT;
+        size_t pos1, pos2 = 0;
+        for (;;) {
+            pos1 = line.find_first_not_of(delimits, pos2);
+            if (pos1 == std::string::npos) break; // if empty or all delimits
 
-        char *token = strtok(line, DELIMIT);
-        while (token != NULL) {
-            tokens[position++] = token;
-            
-            if (position >= bufSize) {
-                bufSize += NLINE;
-                int length = bufSize * sizeof(char *);
-                char **buf = new (std::nothrow) char *[length];
-                if (!buf) {
-                    std::cerr << "ERR: reallocation of buffer\n";
-                    delete[] buf;
-                    delete[] tokens;
-                    exit(EXIT_FAILURE);
-                }
-
-                std::copy_n(tokens, length, buf);
-                delete[] tokens;
-                tokens = buf;
+            pos2 = line.find_first_of(delimits, pos1 + 1);
+            if (pos2 != std::string::npos) {
+                tokens.push_back(line.substr(pos1, pos2 - pos1));
+            } else {
+                tokens.push_back(line.substr(pos1));
+                break;
             }
-
-            token = strtok(NULL, DELIMIT);
         }
-        
-        tokens[position] = NULL;
 
         return tokens;
     }
 
-    int execute(char **args)
+    int execute(std::vector<std::string> args)
     {
+        if (args.size() < 1) return 1;
 
-        if (!args[0]) return 1;
-
-        if (args[0] == std::string{"exit"} || isPrefix(args[0], "quit")) {
+        if (args[0] == "exit" || isPrefix(args[0], "quit")) {
             return 0;
         }
 
@@ -124,6 +110,7 @@ namespace newsh {
         if (!status) {
             return launch(args); 
         }
+        
 
         return status;
     }
