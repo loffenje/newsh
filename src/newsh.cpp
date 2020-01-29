@@ -97,6 +97,7 @@ namespace newsh {
         return tokens;
     }
 
+
     int execute(std::vector<std::string> args)
     {
         if (args.size() < 1) return 1;
@@ -104,14 +105,46 @@ namespace newsh {
         if (args[0] == "exit" || isPrefix(args[0], "quit")) {
             return 0;
         }
-
-        std::pair<std::string, func> cmd = findCommand(args[0]);
-        int status = dispatchCommand(cmd, args);
-        if (!status) {
-            return launch(args); 
-        }
         
+        std::vector<std::string> subArgs;
 
+        auto arg_cmp = [](const std::string &arg) {
+            return arg == "&&";
+        };
+ 
+        auto offsetIt = args.begin();
+        auto findIt = std::find_if(args.begin(), args.end(), arg_cmp);
+        int status = 1;
+        bool processArgsChain = true; // keep processing until we don't find a '&&' symbol
+        do { 
+            
+            if (!subArgs.empty()) {
+                subArgs.clear();
+            }
+
+            if (findIt == args.end()) {
+                processArgsChain = false;
+            } 
+
+            subArgs.assign(offsetIt, findIt);
+
+            if (subArgs[0] == "exit" || isPrefix(subArgs[0], "quit")) {
+                return 0;
+            }
+            
+            offsetIt = ++findIt;
+
+            std::pair<std::string, func> cmd = findCommand(subArgs[0]);
+            status = dispatchCommand(cmd, subArgs);
+            if (!status) {
+                status = launch(subArgs); 
+            }
+            
+            subArgs.clear();
+            findIt = std::find_if(offsetIt, args.end(), arg_cmp);
+
+        } while (processArgsChain);
+        
         return status;
     }
 }
